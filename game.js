@@ -7,6 +7,8 @@ kaboom({
     background: [ 0, 0, 0, 1],
 })
 
+const MOVE_SPEED = 120
+
 // Load assets
 loadRoot('assets/')
 loadSprite('link-going-right', 'link-going-right.png')
@@ -62,9 +64,9 @@ scene("game", ({ level, score }) => {
         'x': () => [sprite('top-left-wall'), area(), solid(), origin("bot")],
         'y': () => [sprite('bottom-right-wall'), area(), solid(), origin("bot")],
         'z': () => [sprite('bottom-left-wall'), area(), solid(), origin("bot")],
-        '^': () => [sprite('top-door'), area(), origin("bot")],
-        '<': () => [sprite('left-door'), area(), solid(), origin("bot")],
-        's': () => [sprite('stairs'), area(), origin("bot")],
+        '^': () => [sprite('top-door'), "next-level", area(), origin("bot")],
+        '<': () => [sprite('left-door'), "next-level", area(), solid(), origin("bot")],
+        's': () => [sprite('stairs'), "next-level", area(), origin("bot")],
         '*': () => [sprite('slicer'), area(), origin("bot")],
         '}': () => [sprite('skeletor'), area(), origin("bot")],
         'm': () => [sprite('lanterns'), area(), solid(), origin("bot")],
@@ -77,7 +79,42 @@ scene("game", ({ level, score }) => {
 
     add([text('Level ' + level), pos(200, 150), layer('ui'), scale(0.5)])
 
-    const player = add([sprite('link-going-right'), pos(5, 190), layer('obj')])
+    const player = add([sprite('link-going-right'), pos(70, 450), layer('obj'),
+        {
+            // Right by default
+            dir: vec2(1, 0),
+        }
+    ])
+
+    player.action(() => {
+        //player.resolve()
+    })
+
+    //player.overlaps()
+
+    keyDown('left', () => {
+        player.use(sprite('link-going-left'))
+        player.move(-MOVE_SPEED, 0)
+        player.dir = vec2(-1, 0)
+    })
+    keyDown('right', () => {
+        player.use(sprite('link-going-right'))
+        player.move(MOVE_SPEED, 0)
+        player.dir = vec2(1, 0)
+    })
+    keyDown('up', () => {
+        player.use(sprite('link-going-up'))
+        player.move(0, -MOVE_SPEED)
+        player.dir = vec2(0, -1)
+    })
+    keyDown('down', () => {
+        player.use(sprite('link-going-down'))
+        player.move(0, MOVE_SPEED)
+        player.dir = vec2(0, 1)
+    })
+
+
+
 
 
 })
