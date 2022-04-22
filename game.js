@@ -69,7 +69,7 @@ scene("game", ({ level, score }) => {
         width: 48,
         height: 48,
         pos: vec2(50, 250),
-        'a': () => [sprite('left-wall'), "wall", area(), solid(), origin("bot")],
+        'a': () => [sprite('left-wall'), "wall", area(), solid(), body(), origin("bot")],
         'b': () => [sprite('right-wall'), "wall", area(), solid(), origin("bot")],
         'c': () => [sprite('top-wall'), "wall", area(), solid(), origin("bot")],
         'd': () => [sprite('bottom-wall'), "wall", area(), solid(), origin("bot")],
@@ -81,8 +81,8 @@ scene("game", ({ level, score }) => {
         '<': () => [sprite('left-door'), "next-level", "door", area(), solid(), origin("bot")],
         's': () => [sprite('stairs'), "next-level", area(), origin("bot")],
         '*': () => [sprite('slicer'), "dangerours", "slicer", area(), { dir: -1 }, origin("bot")],
-        '}': () => [sprite('skeletor'), "dangerours", "skeletor", area(), { dir: -1 }, origin("bot")],
-        'm': () => [sprite('lanterns'), area(), solid(), origin("bot")],
+        '}': () => [sprite('skeletor'), "dangerours", "skeletor", area(), { dir: -1, timer: 0 }, origin("bot")],
+        'm': () => [sprite('lanterns'), "wall", area(), solid(), origin("bot")],
         'f': () => [sprite('fire-pot'), area(), solid(), origin("bot")],
     })
 
@@ -100,6 +100,7 @@ scene("game", ({ level, score }) => {
 
     add([text('Level ' + level), pos(200, 150), layer('ui'), scale(0.5)])
 
+    // Player
     const player = add([
         sprite('link-going-right'), 
         area(), 
@@ -115,6 +116,7 @@ scene("game", ({ level, score }) => {
         //player.resolve()
     })
 
+    // Enter in doors and stairs
     player.collides('next-level', () => {
         go('game', {
             level: (level + 1) % maps.length,
@@ -122,6 +124,12 @@ scene("game", ({ level, score }) => {
         })
     })
 
+    // Get hit by enemies
+    player.collides('dangerours', () => {
+        go("lose", {score: scoreLabel.value})
+    })
+
+    // Move player
     keyDown('left', () => {
         player.use(sprite('link-going-left'))
         player.move(-MOVE_SPEED, 0)
@@ -143,6 +151,15 @@ scene("game", ({ level, score }) => {
         player.dir = vec2(0, 1)
     })
 
+    // Fire
+    function spawnKaboom(p) {
+        const obj = add([sprite('kaboom'), pos(p)])
+    }
+
+    keyDown('space', () => {
+        spawnKaboom(player.pos.add(player.dir.scale(48)))
+    }
+
 
     // Slicer
     const SLICER_SPEED = 100
@@ -154,9 +171,40 @@ scene("game", ({ level, score }) => {
         s.dir = -s.dir
     })
 
+    
+    // Skeletor
+    const SKELETOR_SPEED = 60
+    action('skeletor', (s) => {
+        s.move(0, s.dir * SKELETOR_SPEED)
+        s.timer -= dt()
+        if(s.timer <= 0) {
+            s.dir = -s.dir
+            s.timer = rand(5)
+        }
+    }) 
+
+    collides('skeletor', 'wall', (s) => {
+        s.dir = -s.dir
+    }) 
 
 
 
+})
+
+
+scene("lose", ({ score }) => {
+    layers(['bg', 'obj', 'ui'], 'obj')
+
+    add([text('You lose'), pos(200, 150), layer('ui'), scale(0.5)])
+    add([text('Score: ' + score), pos(200, 200), layer('ui'), scale(0.5)])
+    add([text('Press space to restart'), pos(200, 250), layer('ui'), scale(0.5)])
+
+    keyDown('space', () => {
+        go('game', {
+            level: 0,
+            score: 0
+        })
+    })
 })
 
 function start() {
