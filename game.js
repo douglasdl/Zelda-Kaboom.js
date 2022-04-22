@@ -38,15 +38,16 @@ loadSprite('arrow', 'arrow.png')
 
 const maps = [
     [
-        'xccmcc^ccw',
-        'a        b',
-        'a      * b',
-        'a    f   b',
-        '<        b',
-        'a    f   b',
-        'a   *    b',
-        'a        b',
-        'zddmddmddy'
+        '       o   ',
+        ' xccmcc^ccw',
+        ' a        b',
+        ' a      * b',
+        ' a    f   b',
+        'o<        b',
+        ' a    f   b',
+        ' a   *    b',
+        ' a        b',
+        ' zddmddmddy'
     ],
     [
         'xccccccccw',
@@ -61,55 +62,64 @@ const maps = [
     ]
 ]
 
+const levelCfg = {
+    width: 48,
+    height: 48,
+    pos: vec2(50, 250),
+    'a': () => [sprite('left-wall'), "wall", area(), solid(), origin("bot")],
+    'b': () => [sprite('right-wall'), "wall", area(), solid(), origin("bot")],
+    'c': () => [sprite('top-wall'), "wall", area(), solid(), origin("bot")],
+    'd': () => [sprite('bottom-wall'), "wall", area(), solid(), origin("bot")],
+    'w': () => [sprite('top-right-wall'), "wall", area(), solid(), origin("bot")],
+    'x': () => [sprite('top-left-wall'), "wall", area(), solid(), origin("bot")],
+    'y': () => [sprite('bottom-right-wall'), "wall", area(), solid(), origin("bot")],
+    'z': () => [sprite('bottom-left-wall'), "wall", area(), solid(), origin("bot")],
+    '^': () => [sprite('top-door'), "door", area(), origin("bot")],
+    '<': () => [sprite('left-door'), "door", area(), solid(), origin("bot")],
+    's': () => [sprite('stairs'), "next-level", area(), origin("bot")],
+    '*': () => [sprite('slicer'), "dangerours", "slicer", area(), { dir: -1 }, origin("bot")],
+    '}': () => [sprite('skeletor'), "dangerours", "skeletor", area(), { dir: -1, timer: 0 }, origin("bot")],
+    'm': () => [sprite('lanterns'), "wall", area(), solid(), origin("bot")],
+    'f': () => [sprite('fire-pot'), area(), solid(), origin("bot")],
+    'o': () => [sprite('arrow'), "next-level", area(), solid(), origin("bot")],
+}
+
 scene("game", ({ level, score }) => {
 
     layers(['bg', 'obj', 'ui'], 'obj')
 
-    const gameLevel = addLevel(maps[level], {
-        width: 48,
-        height: 48,
-        pos: vec2(50, 250),
-        'a': () => [sprite('left-wall'), "wall", area(), solid(), body(), origin("bot")],
-        'b': () => [sprite('right-wall'), "wall", area(), solid(), origin("bot")],
-        'c': () => [sprite('top-wall'), "wall", area(), solid(), origin("bot")],
-        'd': () => [sprite('bottom-wall'), "wall", area(), solid(), origin("bot")],
-        'w': () => [sprite('top-right-wall'), "wall", area(), solid(), origin("bot")],
-        'x': () => [sprite('top-left-wall'), "wall", area(), solid(), origin("bot")],
-        'y': () => [sprite('bottom-right-wall'), "wall", area(), solid(), origin("bot")],
-        'z': () => [sprite('bottom-left-wall'), "wall", area(), solid(), origin("bot")],
-        '^': () => [sprite('top-door'), "next-level", "door", area(), origin("bot")],
-        '<': () => [sprite('left-door'), "next-level", "door", area(), solid(), origin("bot")],
-        's': () => [sprite('stairs'), "next-level", area(), origin("bot")],
-        '*': () => [sprite('slicer'), "dangerours", "slicer", area(), { dir: -1 }, origin("bot")],
-        '}': () => [sprite('skeletor'), "dangerours", "skeletor", area(), { dir: -1, timer: 0 }, origin("bot")],
-        'm': () => [sprite('lanterns'), "wall", area(), solid(), origin("bot")],
-        'f': () => [sprite('fire-pot'), area(), solid(), origin("bot")],
-    })
+    const gameLevel = addLevel(maps[level], levelCfg)
 
+    // Background
     //add(sprite('floor'), area(gameLevel.width, gameLevel.height), solid(), origin("bot"))
+    add([sprite('floor'), layer('bg'), pos(266, 634), origin("bot")])
 
+    
     const scoreLabel = add([
-        text('0'), 
-        pos(100, 150), 
+        text(`Score: ${score}`), 
+        pos(20, 150), 
         layer('ui'),
         {
             value: score,
         },
         scale(0.5)
     ])
+    
+    
 
-    add([text('Level ' + level), pos(200, 150), layer('ui'), scale(0.5)])
+    add([text('Level ' + level), pos(300, 150), layer('ui'), scale(0.5)])
 
     // Player
     const player = add([
         sprite('link-going-right'), 
         area(), 
-        pos(70, 450), 
+        pos(100, 400), 
         layer('obj'),
         {
             //Right by default
             dir: vec2(1, 0),
-        }
+        },
+        'player'
     ])
 
     player.action(() => {
@@ -127,6 +137,10 @@ scene("game", ({ level, score }) => {
     // Get hit by enemies
     player.collides('dangerours', () => {
         go("lose", {score: scoreLabel.value})
+    })
+
+    player.collides('wall', (pl) => {
+        pl.move(-1, -1)
     })
 
     // Move player
@@ -150,15 +164,43 @@ scene("game", ({ level, score }) => {
         player.move(0, MOVE_SPEED)
         player.dir = vec2(0, 1)
     })
+    player.onCollide('wall', (player) => {
+        shake(2)
+        player.move(0, 0)
+    })
+
+    collides('player', 'wall', (p) => {
+        p.dir = -p.dir
+    })
+
+    player.onCollide('door', (d) => {
+        d.destroy()
+    })
+
+    // camera follows player
+    player.onUpdate(() => {
+        camPos(player.pos)
+    })
 
     // Fire
     function spawnKaboom(p) {
-        const obj = add([sprite('kaboom'), pos(p)])
+        const obj = add([sprite('kaboom'), pos(p), area(), 'kaboom'])
+        wait(0.5, () => {
+            //obj.destroy()
+            destroy(obj)
+        })
     }
 
     keyDown('space', () => {
         spawnKaboom(player.pos.add(player.dir.scale(48)))
-    }
+    })
+
+    
+
+
+    
+
+    
 
 
     // Slicer
@@ -170,6 +212,19 @@ scene("game", ({ level, score }) => {
     collides('slicer', 'wall', (s) => {
         s.dir = -s.dir
     })
+
+    onCollide('kaboom', 'slicer', (k, s) => {
+        shake(4)
+        wait(0.5, () => {
+            destroy(k)
+        })
+        destroy(s)
+        scoreLabel.value += 15
+        scoreLabel.text = `Score: ${scoreLabel.value}`
+        
+    })
+
+    
 
     
     // Skeletor
@@ -187,6 +242,16 @@ scene("game", ({ level, score }) => {
         s.dir = -s.dir
     }) 
 
+    onCollide('kaboom', 'skeletor', (k, s) => {
+        shake(4)
+        wait(0.5, () => {
+            destroy(k)
+        })
+        destroy(s)
+        scoreLabel.value += 20
+        scoreLabel.text = `Score: ${scoreLabel.value}`
+    })
+
 
 
 })
@@ -197,9 +262,9 @@ scene("lose", ({ score }) => {
 
     add([text('You lose'), pos(200, 150), layer('ui'), scale(0.5)])
     add([text('Score: ' + score), pos(200, 200), layer('ui'), scale(0.5)])
-    add([text('Press space to restart'), pos(200, 250), layer('ui'), scale(0.5)])
+    add([text('Press Enter to restart'), pos(200, 250), layer('ui'), scale(0.5)])
 
-    keyDown('space', () => {
+    keyDown('enter', () => {
         go('game', {
             level: 0,
             score: 0
